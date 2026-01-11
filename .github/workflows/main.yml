@@ -18,9 +18,13 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: maven
 
       - name: Build Java
         run: mvn clean package -DskipTests
+
+      - name: Install C++ dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasio-dev
 
       - name: Build C++ Engine
         run: |

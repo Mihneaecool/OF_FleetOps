@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: fleet_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    # MODIFICARE: Adăugăm volumul pentru persistență
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fleet_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  cpp-service:
+    build: ./route-engine
+    container_name: cpp_service
+    ports:
+      - "18080:18080"
+
+  gateway:
+    build: .
+    container_name: spring_gateway
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+      cpp-service:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fleet_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+# MODIFICARE: Definim volumul la finalul fișierului
+volumes:
+  postgres_data:

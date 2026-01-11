@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fleet Tracking System</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 20px; background: #eceff1; color: #263238; }
+        #map { height: 600px; width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #cfd8dc; }
+        .info-panel { background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #2196f3; }
+        h1 { margin: 0; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px; }
+        #status { font-weight: bold; font-size: 0.9rem; margin-top: 5px; }
+
+        #coords-log {
+            background: #1e1e1e; color: #76ff03; padding: 15px; border-radius: 5px;
+            height: 180px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 0.85rem;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .log-header { font-weight: bold; margin-bottom: 10px; color: #fff; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .delivered-msg { color: #00e676; font-weight: bold; padding: 5px 0; border-bottom: 1px solid #333; }
+        .timestamp { color: #888; margin-right: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="info-panel">
+    <h1>Sistem Monitorizare Flota</h1>
+    <div id="status">Status: Se stabileste conexiunea...</div>
+</div>
+
+<div id="map"></div>
+
+<div class="info-panel">
+    <div class="log-header">JURNAL ACTIVITATE SERVER</div>
+    <div id="coords-log">Initializare sistem...</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+    // Initializare harta cu un stil mai curat (Light Mode profesional)
+    var map = L.map('map').setView([45.9432, 24.9668], 7);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+
+    var markers = {};
+    var polylines = {};
+    var logElement = document.getElementById('coords-log');
+
+    // Functie pentru a crea un indicator de pozitie stilizat (fara imagini externe)
+    function createVehicleMarker(latlng) {
+        return L.circleMarker(latlng, {
+            radius: 8,
+            fillColor: "#2196f3",
+            color: "#fff",
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+        });
+    }
+
+    var socket = new SockJS('/ws');
+    var stompClient = Stomp.over(socket);
+    stompClient.debug = null; // Dezactiveaza log-urile STOMP in consola browserului
+
+    stompClient.connect({}, function (frame) {
+        document.getElementById('status').innerText = "STATUS: CONECTAT / MONITORIZARE ACTIVA";
+        document.getElementById('status').style.color = "#2e7d32";
+        logElement.innerHTML = "Sistem pregatit. Asteptare date vehicule...";
+
+        stompClient.subscribe('/topic/positions', function (message) {
+            var pos = JSON.parse(message.body);
+
+            if (pos.status === "IN_TRANSIT" && pos.lat && pos.lon) {
+                var latlng = [pos.lat, pos.lon];
+
+                if (!markers[pos.orderId]) {
+                    // Start cursa: Creare marker si linie albastra groasa
+                    markers[pos.orderId] = createVehicleMarker(latlng).addTo(map);
+                    polylines[pos.orderId] = L.polyline([latlng], {
+                        color: '#1565c0',
+                        weight: 6,
+                        opacity: 0.8,
+                        lineJoin: 'round'
+                    }).addTo(map);
+
+                    map.flyTo(latlng, 10, { animate: true, duration: 1 });
+                } else {
+                    markers[pos.orderId].setLatLng(latlng);
+                    polylines[pos.orderId].addLatLng(latlng);
+                }
+
+                // Update Jurnal
+                var time = new Date().toLocaleTimeString();
+                var entry = `<div><span class="timestamp">[${time}]</span> ID #${pos.orderId} | Pozitie: ${pos.lat.toFixed(4)}, ${pos.lon.toFixed(4)}</div>`;
+                logElement.innerHTML = entry + logElement.innerHTML;
+
+            } else if (pos.status === "DELIVERED") {
+                logElement.innerHTML = `<div class="delivered-msg">FINALIZAT: Comanda #${pos.orderId} a ajuns la destinatie.</div>` + logElement.innerHTML;
+
+                if (polylines[pos.orderId]) {
+                    polylines[pos.orderId].setStyle({color: '#4caf50', weight: 4}); // Se face verde si mai subtire la final
+                }
+            }
+        });
+    }, function(error) {
+        document.getElementById('status').innerText = "STATUS: EROARE CONEXIUNE";
+        document.getElementById('status').style.color = "#c62828";
+    });
+</script>
+</body>
+</html>

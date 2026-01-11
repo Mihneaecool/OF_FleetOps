@@ -7,10 +7,10 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  build-all:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up JDK 17
@@ -18,14 +18,15 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: maven
 
-      - name: Build Java
+      - name: Build Java Application
         run: mvn clean package -DskipTests
 
       - name: Install C++ dependencies
         run: sudo apt-get update && sudo apt-get install -y libasio-dev
 
-      - name: Build C++
+      - name: Build C++ Engine
         run: |
           cd cpp-service
           g++ main.cpp -o fleet_engine -lpthread

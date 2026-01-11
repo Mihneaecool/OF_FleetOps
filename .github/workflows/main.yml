@@ -34,4 +34,4 @@ jobs:
           g++ main.cpp -o engine -lpthread
 
       - name: Verify Docker Compose
-        run: docker-compose build
+        run: docker compose build

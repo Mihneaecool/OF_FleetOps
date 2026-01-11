@@ -1,4 +1,4 @@
-name: mainyamlfile
+name: FleetOps CI-CD
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -31,5 +31,4 @@ jobs:
           g++ main.cpp -o fleet_engine -lpthread
 
       - name: Build Docker Images
-        run: |
-          docker-compose build
+        run: docker-compose build

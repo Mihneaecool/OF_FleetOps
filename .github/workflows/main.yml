@@ -1,0 +1,35 @@
+name: mainyamlfile
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build Java
+        run: mvn clean package -DskipTests
+
+      - name: Install C++ dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasio-dev
+
+      - name: Build C++
+        run: |
+          cd cpp-service
+          g++ main.cpp -o fleet_engine -lpthread
+
+      - name: Build Docker Images
+        run: |
+          docker-compose build

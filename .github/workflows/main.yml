@@ -24,7 +24,9 @@ jobs:
         run: mvn clean package -DskipTests
 
       - name: Install C++ dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasio-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasio-dev nlohmann-json3-dev
 
       - name: Build C++ Engine
         run: |

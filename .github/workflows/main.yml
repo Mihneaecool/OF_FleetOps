@@ -28,7 +28,7 @@ jobs:
 
       - name: Build C++ Engine
         run: |
-          cd cpp-service
+          cd route-engine
           g++ main.cpp -o fleet_engine -lpthread
 
       - name: Build Docker Images
